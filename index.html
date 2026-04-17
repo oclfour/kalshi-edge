@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0f1117">
+<title>Kalshi Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f1117;--bg2:#1a1d27;--bg3:#22263a;--bg4:#2a2f45;
+  --text:#e8eaf0;--text2:#9196b0;--text3:#5a607a;
+  --gold:#f0b429;--green:#22c55e;--red:#ef4444;--blue:#60a5fa;
+  --border:rgba(255,255,255,0.08);--radius:12px;--radius-sm:8px
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',sans-serif;min-height:100vh;padding-bottom:5rem}
+
+/* HEADER */
+.header{background:var(--bg2);border-bottom:1px solid var(--border);padding:.875rem 1.25rem;position:sticky;top:0;z-index:100}
+.header-inner{display:flex;justify-content:space-between;align-items:center;max-width:960px;margin:0 auto}
+.logo{font-size:18px;font-weight:800;letter-spacing:-.03em}
+.logo span{color:var(--gold)}
+.header-right{display:flex;align-items:center;gap:10px}
+.live-badge{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text3);background:var(--bg3);padding:4px 10px;border-radius:20px;border:1px solid var(--border)}
+.live-dot{width:5px;height:5px;background:var(--green);border-radius:50%;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.refresh-btn{font-size:12px;padding:5px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:transparent;color:var(--text2);cursor:pointer;font-family:inherit;transition:all .15s}
+.refresh-btn:hover{background:var(--bg3);color:var(--text)}
+
+/* LAYOUT */
+.container{max-width:960px;margin:0 auto;padding:1.25rem}
+
+/* BOTTOM NAV */
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:var(--bg2);border-top:1px solid var(--border);display:flex;z-index:100;padding-bottom:env(safe-area-inset-bottom)}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:.625rem .5rem;cursor:pointer;color:var(--text3);font-size:10px;letter-spacing:.03em;border:none;background:transparent;font-family:inherit;gap:4px;transition:color .15s}
+.nav-item.active{color:var(--gold)}
+.nav-icon{font-size:18px;line-height:1}
+
+/* PANELS */
+.panel{display:none}
+.panel.active{display:block}
+
+/* PORTFOLIO STATS */
+.port-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:1.25rem}
+.port-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:1rem 1.125rem}
+.port-card.wide{grid-column:1/-1}
+.port-label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px}
+.port-val{font-size:28px;font-weight:700;letter-spacing:-.02em;color:var(--text)}
+.port-val.green{color:var(--green)}
+.port-val.red{color:var(--red)}
+.port-val.gold{color:var(--gold)}
+.port-sub{font-size:12px;color:var(--text3);margin-top:3px}
+.port-change{font-size:13px;font-weight:600;margin-top:4px}
+.port-change.pos{color:var(--green)}
+.port-change.neg{color:var(--red)}
+
+/* CHART */
+.chart-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:1.125rem;margin-bottom:1.25rem}
+.chart-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem}
+.chart-title{font-size:14px;font-weight:600;color:var(--text)}
+.chart-tabs{display:flex;gap:4px}
+.chart-tab{font-size:11px;padding:3px 10px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--text3);cursor:pointer;font-family:inherit;transition:all .15s}
+.chart-tab.active{background:var(--gold);color:var(--bg);border-color:var(--gold);font-weight:600}
+.chart-wrap{position:relative;height:180px}
+
+/* POSITIONS */
+.section-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:.75rem;display:flex;justify-content:space-between;align-items:center}
+.section-title span{font-size:11px;color:var(--text3);font-weight:400}
+.position-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:.875rem 1rem;margin-bottom:8px;display:flex;align-items:center;gap:12px}
+.pos-status{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.pos-status.up{background:var(--green)}
+.pos-status.down{background:var(--red)}
+.pos-status.neutral{background:var(--text3)}
+.pos-info{flex:1;min-width:0}
+.pos-title{font-size:13px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px}
+.pos-meta{font-size:11px;color:var(--text3)}
+.pos-right{text-align:right;flex-shrink:0}
+.pos-pnl{font-size:14px;font-weight:700}
+.pos-pnl.pos{color:var(--green)}
+.pos-pnl.neg{color:var(--red)}
+.pos-cost{font-size:11px;color:var(--text3);margin-top:1px}
+
+/* PICKS */
+.pick-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:1.125rem;margin-bottom:10px;position:relative;overflow:hidden}
+.pick-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px}
+.pick-card.strong::before{background:var(--green)}
+.pick-card.medium::before{background:var(--gold)}
+.pick-card.low::before{background:var(--text3)}
+.pick-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:8px}
+.pick-market{font-size:14px;font-weight:600;color:var(--text);flex:1;line-height:1.3}
+.pick-badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;white-space:nowrap}
+.pick-badge.strong{background:rgba(34,197,94,.2);color:#4ade80}
+.pick-badge.medium{background:rgba(240,180,41,.2);color:var(--gold)}
+.pick-badge.low{background:rgba(255,255,255,.07);color:var(--text3)}
+.pick-row{display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap}
+.pick-side{font-size:12px;font-weight:700;padding:3px 10px;border-radius:6px}
+.pick-side.yes{background:rgba(34,197,94,.2);color:#4ade80}
+.pick-side.no{background:rgba(239,68,68,.2);color:#f87171}
+.pick-price{font-size:12px;color:var(--text2)}
+.pick-edge{font-size:12px;font-weight:700;color:var(--green)}
+.pick-payout{font-size:12px;color:var(--text2)}
+.pick-reason{font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:10px}
+.pick-reason strong{color:var(--text);font-weight:600}
+.pick-note{font-size:11px;color:var(--text3);padding:5px 8px;background:rgba(255,255,255,.04);border-radius:6px;margin-bottom:10px}
+.pick-btn{display:block;text-align:center;padding:9px;font-size:13px;font-weight:600;color:var(--gold);background:rgba(240,180,41,.1);border-radius:8px;text-decoration:none;border:1px solid rgba(240,180,41,.2)}
+
+/* WEATHER */
+.city-scroll{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;margin-bottom:1rem;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.city-scroll::-webkit-scrollbar{display:none}
+.city-btn{flex-shrink:0;font-size:13px;font-weight:500;padding:6px 14px;cursor:pointer;color:var(--text2);background:var(--bg2);border:1px solid var(--border);border-radius:20px;font-family:inherit;transition:all .15s;white-space:nowrap}
+.city-btn.active{color:var(--bg);background:var(--gold);border-color:var(--gold)}
+.forecast-banner{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:1rem;margin-bottom:1rem;display:flex;gap:1.5rem;align-items:center;flex-wrap:wrap}
+.fc-item{text-align:center}
+.fc-val{font-size:24px;font-weight:700;color:var(--gold);display:block}
+.fc-label{font-size:11px;color:var(--text3);margin-top:1px}
+.fc-sep{width:1px;height:36px;background:var(--border)}
+.weather-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.wcard{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:.875rem;position:relative;overflow:hidden;text-decoration:none;display:block}
+.wcard::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px}
+.wcard.yes-edge::before{background:var(--green)}
+.wcard.no-edge::before{background:var(--red)}
+.wcard.neutral::before{background:var(--border)}
+.wcard-date{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px}
+.wcard-strike{font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px}
+.wcard-prices{display:flex;gap:5px;margin-bottom:6px}
+.wcard-yes{font-size:11px;font-weight:600;padding:2px 7px;border-radius:5px;background:rgba(34,197,94,.15);color:#4ade80}
+.wcard-no{font-size:11px;font-weight:600;padding:2px 7px;border-radius:5px;background:rgba(239,68,68,.15);color:#f87171}
+.wcard-edge{font-size:11px;font-weight:600}
+.wcard-edge.pos{color:var(--green)}
+.wcard-edge.neg{color:var(--red)}
+.wcard-edge.neutral{color:var(--text3)}
+.wcard-trade{display:block;margin-top:7px;font-size:11px;font-weight:600;color:var(--gold);text-align:center;padding:5px;background:rgba(240,180,41,.1);border-radius:6px;text-decoration:none;border:1px solid rgba(240,180,41,.15)}
+
+/* SPORTS */
+.game-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:1rem;margin-bottom:10px}
+.game-head{display:flex;justify-content:space-between;margin-bottom:10px;gap:8px}
+.game-league{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px}
+.game-title{font-size:14px;font-weight:600;color:var(--text);line-height:1.2}
+.game-right{text-align:right;flex-shrink:0}
+.game-date{font-size:11px;color:var(--text3)}
+.game-vol{font-size:11px;color:var(--text3)}
+.game-teams{display:flex;flex-direction:column;gap:6px}
+.team-row{display:flex;align-items:center;justify-content:space-between;padding:7px 10px;background:var(--bg3);border-radius:8px;text-decoration:none;gap:8px}
+.team-row:hover{background:var(--bg4)}
+.team-name{font-size:13px;font-weight:500;color:var(--text);flex:1}
+.team-right{display:flex;align-items:center;gap:8px}
+.team-tag{font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px}
+.team-tag.fav{background:rgba(240,180,41,.15);color:var(--gold)}
+.team-tag.dog{background:rgba(255,255,255,.05);color:var(--text3)}
+.team-price{font-size:14px;font-weight:700;color:var(--text);min-width:32px;text-align:right}
+.team-payout{font-size:11px;color:var(--text3);min-width:28px;text-align:right}
+
+/* LOADING / STATES */
+.loading-state{text-align:center;padding:3rem 1rem;color:var(--text3);font-size:14px}
+.error-state{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);border-radius:var(--radius);padding:1rem;color:#f87171;font-size:13px;margin-bottom:1rem}
+.disclaimer{font-size:11px;color:var(--text3);line-height:1.6;padding:.75rem 1rem;background:rgba(255,255,255,.03);border-radius:var(--radius-sm);border-left:3px solid var(--text3);margin-bottom:1rem}
+.empty{text-align:center;padding:2rem 1rem;color:var(--text3);font-size:13px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius)}
+.divider{height:1px;background:var(--border);margin:1rem 0}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-inner">
+    <div class="logo">Kalshi <span>Edge</span></div>
+    <div class="header-right">
+      <div class="live-badge"><span class="live-dot"></span><span id="lastUpdate">Loading...</span></div>
+      <button class="refresh-btn" onclick="loadAll()">Refresh</button>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- PICKS PANEL -->
+  <div id="panel-picks" class="panel active">
+    <div id="picksContent"><div class="loading-state">Generating today's picks...</div></div>
+  </div>
+
+  <!-- PORTFOLIO PANEL -->
+  <div id="panel-portfolio" class="panel">
+    <div id="portfolioContent"><div class="loading-state">Loading your account...</div></div>
+  </div>
+
+  <!-- WEATHER PANEL -->
+  <div id="panel-weather" class="panel">
+    <div class="city-scroll" id="cityTabs"></div>
+    <div id="forecastBanner"></div>
+    <div id="weatherGrid" class="weather-grid"></div>
+  </div>
+
+  <!-- SPORTS PANEL -->
+  <div id="panel-sports" class="panel">
+    <div id="sportsContent"><div class="loading-state">Loading games...</div></div>
+  </div>
+
+</div>
+
+<!-- BOTTOM NAV -->
+<nav class="bottom-nav">
+  <button class="nav-item active" onclick="switchPanel('picks',this)">
+    <span class="nav-icon">⚡</span>Picks
+  </button>
+  <button class="nav-item" onclick="switchPanel('portfolio',this)">
+    <span class="nav-icon">💰</span>Portfolio
+  </button>
+  <button class="nav-item" onclick="switchPanel('weather',this)">
+    <span class="nav-icon">🌡</span>Weather
+  </button>
+  <button class="nav-item" onclick="switchPanel('sports',this)">
+    <span class="nav-icon">🏀</span>Sports
+  </button>
+</nav>
+
+<script>
+const BASE = '';
+let currentCity = 'NY';
+let weatherData = {};
+let forecastCache = {};
+let portfolioChart = null;
+let chartMode = '7d';
+
+function switchPanel(name, btn) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  btn.classList.add('active');
+}
+
+async function apiFetch(path, params = {}) {
+  const qs = new URLSearchParams({ path, ...params }).toString();
+  const r = await fetch(`/api/kalshi?${qs}`);
+  return r.json();
+}
+
+async function weatherFetch(city) {
+  const r = await fetch(`/api/weather?city=${city}`);
+  return r.json();
+}
+
+function calcEdge(market, forecast) {
+  if (!forecast) return null;
+  let fProb = 0;
+  const st = market.strike_type;
+  const fs = market.floor_strike;
+  const cs = market.cap_strike;
+  if (st === 'greater' && fs !== undefined) fProb = forecast > fs ? 0.88 : forecast === fs ? 0.2 : 0.03;
+  else if (st === 'less' && cs !== undefined) fProb = forecast < cs ? 0.88 : forecast === cs ? 0.2 : 0.03;
+  else if (st === 'between' && fs !== undefined && cs !== undefined) fProb = (forecast >= fs && forecast <= cs) ? 0.80 : 0.04;
+  return Math.round((fProb - (parseFloat(market.yes_ask_dollars) || 0)) * 100);
+}
+
+function fmtDollars(val) {
+  const n = parseFloat(val) || 0;
+  return '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function fmtVol(v) {
+  const n = parseFloat(v) || 0;
+  if (n >= 1000000) return '$' + (n / 1000000).toFixed(1) + 'M';
+  if (n >= 1000) return '$' + (n / 1000).toFixed(1) + 'K';
+  return '$' + Math.round(n);
+}
+
+/* ── PORTFOLIO ── */
+async function loadPortfolio() {
+  const el = document.getElementById('portfolioContent');
+  try {
+    const [balRes, posRes, fillsRes] = await Promise.all([
+      apiFetch('portfolio/balance'),
+      apiFetch('portfolio/positions', { limit: '20' }),
+      apiFetch('portfolio/fills', { limit: '50' }),
+    ]);
+
+    const balance = balRes.balance || {};
+    const positions = posRes.market_positions || [];
+    const fills = fillsRes.fills || [];
+
+    const cash = parseFloat(balance.available_balance_cents || 0) / 100;
+    const portfolio = parseFloat(balance.portfolio_value_cents || 0) / 100;
+    const total = cash + portfolio;
+    const pnl = parseFloat(balance.total_deposits_cents || 0) / 100;
+
+    let posHTML = '';
+    if (positions.length) {
+      posHTML = `<div class="section-title">Open positions <span>${positions.length} markets</span></div>`;
+      positions.forEach(p => {
+        const value = parseFloat(p.value_cents || 0) / 100;
+        const cost = parseFloat(p.total_cost_cents || 0) / 100;
+        const unrealized = value - cost;
+        const isPos = unrealized >= 0;
+        posHTML += `<div class="position-card">
+          <div class="pos-status ${isPos ? 'up' : 'down'}"></div>
+          <div class="pos-info">
+            <div class="pos-title">${p.ticker || 'Unknown market'}</div>
+            <div class="pos-meta">${p.position || 0} contracts · ${p.market_exposure ? 'YES' : 'NO'} side</div>
+          </div>
+          <div class="pos-right">
+            <div class="pos-pnl ${isPos ? 'pos' : 'neg'}">${isPos ? '+' : ''}${fmtDollars(unrealized)}</div>
+            <div class="pos-cost">Cost ${fmtDollars(cost)}</div>
+          </div>
+        </div>`;
+      });
+    } else {
+      posHTML = `<div class="empty">No open positions right now</div>`;
+    }
+
+    const chartData = buildPnLFromFills(fills);
+
+    el.innerHTML = `
+      <div class="port-grid">
+        <div class="port-card wide">
+          <div class="port-label">Total account value</div>
+          <div class="port-val gold">${fmtDollars(total)}</div>
+          <div class="port-sub">Cash + open positions</div>
+        </div>
+        <div class="port-card">
+          <div class="port-label">Cash available</div>
+          <div class="port-val">${fmtDollars(cash)}</div>
+        </div>
+        <div class="port-card">
+          <div class="port-label">Portfolio value</div>
+          <div class="port-val">${fmtDollars(portfolio)}</div>
+        </div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-header">
+          <div class="chart-title">P&L over time</div>
+          <div class="chart-tabs">
+            <button class="chart-tab active" onclick="switchChart('7d',this)">7d</button>
+            <button class="chart-tab" onclick="switchChart('30d',this)">30d</button>
+            <button class="chart-tab" onclick="switchChart('all',this)">All</button>
+          </div>
+        </div>
+        <div class="chart-wrap"><canvas id="pnlChart"></canvas></div>
+      </div>
+
+      ${posHTML}
+    `;
+
+    window._chartData = chartData;
+    renderChart(chartData['7d'], 'rgba(240,180,41,0.9)', 'rgba(240,180,41,0.15)');
+
+  } catch (e) {
+    el.innerHTML = `<div class="error-state">Could not load portfolio. Check that your KALSHI_API_KEY environment variable is set correctly in Vercel.</div>`;
+  }
+}
+
+function buildPnLFromFills(fills) {
+  const byDay = {};
+  fills.forEach(f => {
+    const d = (f.created_time || '').split('T')[0];
+    if (!d) return;
+    if (!byDay[d]) byDay[d] = 0;
+    const side = f.side === 'yes' ? 1 : -1;
+    const cost = parseFloat(f.count || 0) * parseFloat(f.yes_price || 0) / 100;
+    byDay[d] += side * cost * -1;
+  });
+
+  const sorted = Object.entries(byDay).sort((a, b) => a[0].localeCompare(b[0]));
+  let running = 0;
+  const all = sorted.map(([date, pnl]) => { running += pnl; return { date, pnl: parseFloat(running.toFixed(2)) }; });
+
+  const now = new Date();
+  const d7 = new Date(now); d7.setDate(d7.getDate() - 7);
+  const d30 = new Date(now); d30.setDate(d30.getDate() - 30);
+
+  return {
+    '7d': all.filter(x => new Date(x.date) >= d7),
+    '30d': all.filter(x => new Date(x.date) >= d30),
+    'all': all,
+  };
+}
+
+function switchChart(mode, btn) {
+  chartMode = mode;
+  document.querySelectorAll('.chart-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  const data = window._chartData?.[mode] || [];
+  const isPos = (data[data.length - 1]?.pnl || 0) >= 0;
+  renderChart(data, isPos ? 'rgba(34,197,94,0.9)' : 'rgba(239,68,68,0.9)', isPos ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.1)');
+}
+
+function renderChart(data, lineColor, fillColor) {
+  if (portfolioChart) portfolioChart.destroy();
+  const ctx = document.getElementById('pnlChart');
+  if (!ctx) return;
+
+  if (!data || !data.length) {
+    ctx.getContext('2d').clearRect(0, 0, ctx.width, ctx.height);
+    return;
+  }
+
+  portfolioChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: data.map(d => d.date),
+      datasets: [{
+        data: data.map(d => d.pnl),
+        borderColor: lineColor,
+        backgroundColor: fillColor,
+        borderWidth: 2,
+        pointRadius: 0,
+        pointHoverRadius: 4,
+        fill: true,
+        tension: 0.3,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { intersect: false, mode: 'index' },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#1a1d27',
+          borderColor: 'rgba(255,255,255,0.1)',
+          borderWidth: 1,
+          titleColor: '#9196b0',
+          bodyColor: '#e8eaf0',
+          callbacks: {
+            label: ctx => ' $' + ctx.parsed.y.toFixed(2)
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { color: 'rgba(255,255,255,0.04)' },
+          ticks: { color: '#5a607a', font: { size: 10 }, maxTicksLimit: 6 },
+        },
+        y: {
+          grid: { color: 'rgba(255,255,255,0.04)' },
+          ticks: { color: '#5a607a', font: { size: 10 }, callback: v => '$' + v },
+        }
+      }
+    }
+  });
+}
+
+/* ── WEATHER ── */
+const CITIES = [
+  { id: 'NY', label: 'New York', ticker: 'KXHIGHNY' },
+  { id: 'CHI', label: 'Chicago', ticker: 'KXHIGHCHI' },
+  { id: 'DAL', label: 'Dallas', ticker: 'KXHIGHDAL' },
+  { id: 'LA', label: 'Los Angeles', ticker: 'KXHIGHLA' },
+  { id: 'DEN', label: 'Denver', ticker: 'KXHIGHDEN' },
+];
+
+function buildCityTabs() {
+  const wrap = document.getElementById('cityTabs');
+  wrap.innerHTML = CITIES.map(c =>
+    `<button class="city-btn${c.id === currentCity ? ' active' : ''}" onclick="selectCity('${c.id}',this)">${c.label}</button>`
+  ).join('');
+}
+
+async function selectCity(id, btn) {
+  currentCity = id;
+  document.querySelectorAll('.city-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  await loadWeatherCity(id);
+}
+
+async function loadWeatherCity(id) {
+  const city = CITIES.find(c => c.id === id);
+  const banner = document.getElementById('forecastBanner');
+  const grid = document.getElementById('weatherGrid');
+  banner.innerHTML = '<div class="loading-state" style="padding:1rem">Loading forecast...</div>';
+  grid.innerHTML = '';
+
+  const [forecast, markets] = await Promise.all([
+    forecastCache[id] ? Promise.resolve(forecastCache[id]) : weatherFetch(id).then(d => { forecastCache[id] = d; return d; }),
+    apiFetch('markets', { series_ticker: city.ticker, limit: '20' }),
+  ]);
+
+  const activeMarkets = (markets.markets || []).filter(m => m.status === 'active');
+
+  banner.innerHTML = `<div class="forecast-banner">
+    <div class="fc-item"><span class="fc-val">${forecast.today}°</span><span class="fc-label">Today</span></div>
+    <div class="fc-sep"></div>
+    <div class="fc-item"><span class="fc-val">${forecast.tomorrow}°</span><span class="fc-label">Tomorrow</span></div>
+    <div class="fc-sep"></div>
+    <div class="fc-item"><span class="fc-val">${forecast.dayAfter}°</span><span class="fc-label">${forecast.dates?.[2] || 'Day 3'}</span></div>
+    <div class="fc-sep"></div>
+    <div class="fc-item"><span class="fc-val" style="font-size:18px">${activeMarkets.length}</span><span class="fc-label">Live markets</span></div>
+  </div>`;
+
+  if (!activeMarkets.length) {
+    grid.innerHTML = '<div class="empty" style="grid-column:1/-1">No active markets for this city right now.</div>';
+    return;
+  }
+
+  grid.innerHTML = activeMarkets.slice(0, 12).map(m => {
+    const yes = parseFloat(m.yes_ask_dollars) || 0;
+    const no = parseFloat(m.no_ask_dollars) || 0;
+    const isToday = m.event_ticker?.includes(new Date().toISOString().slice(2, 10).replace(/-/g, '').replace('20', ''));
+    const fc = isToday ? forecast.today : forecast.tomorrow;
+    const edge = calcEdge(m, fc);
+    let cardClass = 'neutral', edgeText = 'Fairly priced', edgeClass = 'neutral';
+    if (edge !== null) {
+      if (edge > 8) { cardClass = 'yes-edge'; edgeText = `+${edge}¢ YES edge`; edgeClass = 'pos'; }
+      else if (edge < -8) { cardClass = 'no-edge'; edgeText = `${edge}¢ NO edge`; edgeClass = 'neg'; }
+    }
+    const strike = (m.title || '').replace(/\*\*/g, '').replace('Will the high temp in NYC ', '').replace('Will the high temp in ', '').replace('?', '');
+    return `<div class="wcard ${cardClass}">
+      <div class="wcard-date">${m.event_ticker?.slice(-6) || ''}</div>
+      <div class="wcard-strike">${strike}</div>
+      <div class="wcard-prices">
+        <span class="wcard-yes">Yes ${Math.round(yes * 100)}¢</span>
+        <span class="wcard-no">No ${Math.round(no * 100)}¢</span>
+      </div>
+      <div class="wcard-edge ${edgeClass}">${edgeText}</div>
+      <a href="https://kalshi.com/markets/${m.ticker}" target="_blank" class="wcard-trade">Trade →</a>
+    </div>`;
+  }).join('');
+}
+
+/* ── SPORTS ── */
+async function loadSports() {
+  const el = document.getElementById('sportsContent');
+  const [nba, mlb] = await Promise.all([
+    apiFetch('markets', { series_ticker: 'KXNBAGAME', limit: '16' }),
+    apiFetch('markets', { series_ticker: 'KXMLBGAME', limit: '10' }),
+  ]);
+
+  const allMarkets = [
+    ...(nba.markets || []).filter(m => m.status === 'active'),
+    ...(mlb.markets || []).filter(m => m.status === 'active'),
+  ];
+
+  const grouped = {};
+  allMarkets.forEach(m => {
+    const key = m.event_ticker;
+    if (!grouped[key]) grouped[key] = { markets: [], league: m.event_ticker.startsWith('KXNBA') ? 'NBA' : 'MLB', vol: 0 };
+    grouped[key].markets.push(m);
+    grouped[key].vol += parseFloat(m.volume_24h_fp) || 0;
+  });
+
+  const games = Object.entries(grouped).slice(0, 8);
+  if (!games.length) {
+    el.innerHTML = '<div class="empty">No active game markets right now.</div>';
+    return;
+  }
+
+  el.innerHTML = games.map(([key, g]) => {
+    const teams = g.markets.slice(0, 2);
+    const maxYes = Math.max(...teams.map(t => parseFloat(t.yes_ask_dollars) || 0));
+    const rows = teams.map(t => {
+      const yes = parseFloat(t.yes_ask_dollars) || parseFloat(t.last_price_dollars) || 0;
+      const isFav = yes === maxYes;
+      const payout = yes > 0 ? (1 / yes).toFixed(2) : '—';
+      return `<a href="https://kalshi.com/markets/${t.ticker}" target="_blank" class="team-row">
+        <span class="team-name">${t.yes_sub_title || t.subtitle || 'Team'}</span>
+        <div class="team-right">
+          <span class="team-tag ${isFav ? 'fav' : 'dog'}">${isFav ? 'FAV' : 'DOG'}</span>
+          <span class="team-price">${Math.round(yes * 100)}¢</span>
+          <span class="team-payout">${payout}x</span>
+        </div>
+      </a>`;
+    }).join('');
+
+    const dateStr = teams[0]?.occurrence_datetime ? new Date(teams[0].occurrence_datetime).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
+
+    return `<div class="game-card">
+      <div class="game-head">
+        <div>
+          <div class="game-league">${g.league}</div>
+          <div class="game-title">${(teams[0]?.title || key).replace(/\*\*/g, '')}</div>
+        </div>
+        <div class="game-right">
+          <div class="game-date">${dateStr}</div>
+          <div class="game-vol">${fmtVol(g.vol)} vol</div>
+        </div>
+      </div>
+      <div class="game-teams">${rows}</div>
+    </div>`;
+  }).join('');
+}
+
+/* ── PICKS ── */
+async function loadPicks() {
+  const el = document.getElementById('picksContent');
+  try {
+    const [nyForecast, nyMarkets] = await Promise.all([
+      weatherFetch('NY').then(d => { forecastCache['NY'] = d; return d; }),
+      apiFetch('markets', { series_ticker: 'KXHIGHNY', limit: '20' }),
+    ]);
+
+    const active = (nyMarkets.markets || []).filter(m => m.status === 'active');
+    const picks = [];
+
+    active.forEach(m => {
+      const yes = parseFloat(m.yes_ask_dollars) || 0;
+      const no = parseFloat(m.no_ask_dollars) || 0;
+      const vol = parseFloat(m.volume_24h_fp) || 0;
+      if (vol < 100) return;
+
+      const isToday = m.event_ticker?.slice(-6).includes(
+        new Date().toISOString().slice(5, 10).replace('-', '').replace('20', '')
+      );
+      const fc = isToday ? nyForecast.today : nyForecast.tomorrow;
+      const edge = calcEdge(m, fc);
+      if (edge === null) return;
+
+      const strike = (m.title || '').replace(/\*\*/g, '');
+      const absEdge = Math.abs(edge);
+      if (absEdge < 8) return;
+
+      const isYesEdge = edge > 0;
+      const price = isYesEdge ? yes : no;
+      const payout = price > 0 ? (1 / price).toFixed(2) + 'x' : '—';
+      const conviction = absEdge > 25 ? 'strong' : absEdge > 12 ? 'medium' : 'low';
+
+      picks.push({
+        conviction,
+        market: strike,
+        side: isYesEdge ? 'yes' : 'no',
+        sideLabel: isYesEdge ? 'YES' : 'NO',
+        price,
+        edge: (isYesEdge ? '+' : '') + edge + '¢',
+        payout,
+        ticker: m.ticker,
+        fc,
+        category: 'weather',
+        absEdge,
+      });
+    });
+
+    picks.sort((a, b) => b.absEdge - a.absEdge);
+
+    const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+
+    if (!picks.length) {
+      el.innerHTML = `
+        <div class="disclaimer">Picks are auto-generated by comparing Open-Meteo weather forecasts to Kalshi's implied odds. Not financial advice.</div>
+        <div class="empty">No strong edge plays found right now.<br>NYC forecast: ${nyForecast.today}°F today, ${nyForecast.tomorrow}°F tomorrow.</div>`;
+      return;
+    }
+
+    const strong = picks.filter(p => p.conviction === 'strong');
+    const medium = picks.filter(p => p.conviction === 'medium');
+    const low = picks.filter(p => p.conviction === 'low');
+
+    function pickCard(p) {
+      return `<div class="pick-card ${p.conviction}">
+        <div class="pick-top">
+          <div class="pick-market">${p.market}</div>
+          <span class="pick-badge ${p.conviction}">${p.conviction === 'strong' ? 'Strong' : p.conviction === 'medium' ? 'Medium' : 'Low'}</span>
+        </div>
+        <div class="pick-row">
+          <span class="pick-side ${p.side}">${p.sideLabel}</span>
+          <span class="pick-price">@ ${Math.round(p.price * 100)}¢</span>
+          <span class="pick-edge">${p.edge}</span>
+          <span class="pick-payout">Pays ${p.payout}</span>
+        </div>
+        <div class="pick-reason">Forecast is <strong>${p.fc}°F</strong>. Kalshi is pricing this at ${Math.round(p.price * 100)}¢. Edge of <strong>${p.edge}</strong> vs forecast probability.</div>
+        <a href="https://kalshi.com/markets/${p.ticker}" target="_blank" class="pick-btn">Place this bet on Kalshi →</a>
+      </div>`;
+    }
+
+    el.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.875rem">
+        <div style="font-size:16px;font-weight:700;color:var(--text)">Today's picks</div>
+        <div style="font-size:11px;color:var(--text3)">${today}</div>
+      </div>
+      <div class="disclaimer">Auto-generated from Open-Meteo vs Kalshi odds. NYC forecast: ${nyForecast.today}°F today · ${nyForecast.tomorrow}°F tomorrow. Not financial advice.</div>
+      ${strong.length ? `<div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin-bottom:.625rem">Strong conviction</div>${strong.map(pickCard).join('')}<div class="divider"></div>` : ''}
+      ${medium.length ? `<div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin-bottom:.625rem">Medium conviction</div>${medium.map(pickCard).join('')}<div class="divider"></div>` : ''}
+      ${low.length ? `<div style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin-bottom:.625rem">Low conviction</div>${low.map(pickCard).join('')}` : ''}
+    `;
+
+  } catch (e) {
+    el.innerHTML = `<div class="error-state">Could not load picks: ${e.message}</div>`;
+  }
+}
+
+/* ── MAIN ── */
+async function loadAll() {
+  document.getElementById('lastUpdate').textContent = 'Updating...';
+  forecastCache = {};
+  await Promise.all([
+    loadPicks(),
+    loadPortfolio(),
+    loadSports(),
+  ]);
+  buildCityTabs();
+  loadWeatherCity(currentCity);
+  document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+loadAll();
+</script>
+</body>
+</html>
